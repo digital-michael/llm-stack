@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  vector-db:
+    image: postgres:16
+    container_name: llm-postgres-vector
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - llm_pgvector_data:/var/lib/postgresql/data
+    networks:
+      - llm_private_net
+
+  ollama-server:
+    image: ollama/ollama:latest
+    container_name: llm-ollama
+    restart: unless-stopped
+    runtime: ${GPU_RUNTIME:-runc}
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_MODELS: "/models"
+      OLLAMA_HOST: 0.0.0.0
+    volumes:
+      - llm_ollama_models:/root/.ollama
+    networks:
+      - llm_private_net
+    command: ["serve"]
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: llm-openwebui
+    restart: unless-stopped
+    ports:
+      - "${WEBUI_PORT:-3000}:8080"
+    volumes:
+      - llm_openwebui_data:/app/backend/data
+    environment:
+      - OLLAMA_API_BASE_URL=http://ollama-server:11434
+      - WEBUI_AUTH_DISABLED=${WEBUI_AUTH_DISABLED}
+    networks:
+      - llm_private_net
+    depends_on:
+      - ollama-server
+
+  rag-placeholder:
+    image: alpine:latest
+    container_name: llm-rag-stub
+    command: ["sleep", "infinity"]
+    networks:
+      - llm_private_net
+
+networks:
+  llm_private_net:
+    driver: bridge
+
+volumes:
+  llm_pgvector_data:
+  llm_ollama_models:
+  llm_openwebui_data:
