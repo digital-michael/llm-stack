@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+llama-index
+psycopg[binary]
+python-dotenv
+

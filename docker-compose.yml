@@ -1,6 +1,7 @@
 version: "3.9"
 
 services:
+
   vector-db:
     image: postgres:16
     container_name: llm-postgres-vector
@@ -11,8 +12,36 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - llm_pgvector_data:/var/lib/postgresql/data
+      - ./pgvector-init.sql:/docker-entrypoint-initdb.d/pgvector-init.sql:ro
     networks:
       - llm_private_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rag-engine:
+    build: ./rag-engine
+    container_name: llm-rag-engine
+    restart: unless-stopped
+    ports:
+      - "${RAG_API_PORT:-5100}:5100"
+    volumes:
+      - ${RAG_DOC_DIR}:/app/rag_documents:ro
+
+    networks:
+      - llm_private_net
+    depends_on:
+      - vector-db
+      - ollama-server
+    environment:
+      - RAG_DB_HOST=${RAG_DB_HOST}
+      - RAG_DB_PORT=${RAG_DB_PORT}
+      - RAG_DB_NAME=${RAG_DB_NAME}
+      - RAG_DB_USER=${RAG_DB_USER}
+      - RAG_DB_PASSWORD=${RAG_DB_PASSWORD}
+      - RAG_OLLAMA_BASE_URL=http://ollama-server:11434
 
   ollama-server:
     image: ollama/ollama:latest
@@ -22,12 +51,17 @@ services:
     ports:
       - "11434:11434"
     environment:
-      OLLAMA_MODELS: "/models"
       OLLAMA_HOST: 0.0.0.0
     volumes:
       - llm_ollama_models:/root/.ollama
     networks:
       - llm_private_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
     command: ["serve"]
 
   open-webui:
@@ -46,13 +80,6 @@ services:
     depends_on:
       - ollama-server
 
-  rag-placeholder:
-    image: alpine:latest
-    container_name: llm-rag-stub
-    command: ["sleep", "infinity"]
-    networks:
-      - llm_private_net
-
 networks:
   llm_private_net:
     driver: bridge
@@ -61,3 +88,5 @@ volumes:
   llm_pgvector_data:
   llm_ollama_models:
   llm_openwebui_data:
+
+

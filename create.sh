@@ -13,6 +13,7 @@ done
 
 echo "🔧 Preparing environment..."
 
+
 if $GPU_ENABLED; then
     echo "🟢 GPU support enabled (NVIDIA runtime)"
     export GPU_RUNTIME=nvidia
@@ -22,3 +23,7 @@ else
 fi
 
 docker compose --env-file .env up -d
+
+cd rag-engine
+docker compose build rag-engine
+docker compose up -d

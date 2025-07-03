@@ -24,9 +24,8 @@ POSTGRES_PASSWORD=changeme
 WEBUI_PORT=3000
 WEBUI_AUTH_DISABLED=false
 
-# GPU Support — use 'nvidia' if you have NVIDIA GPUs and NVIDIA Container Toolkit, else leave as 'runc'
-#GPU_RUNTIME=runc
-GPU_RUNTIME=nvidia
+# GPU Support: DON"T USE THIS. Instead use 'bash -C create --gpu` to correctly create and start the llm stack with nvidia enabled.
+
 ```
 
 ## CREATE
